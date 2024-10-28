@@ -7,6 +7,59 @@
 
 using namespace std;
 
+
+template <typename T>
+class qNode{
+public:
+    T data;
+    qNode* next;
+    qNode(T d){
+        data = d;
+        next = nullptr;
+    }
+};
+
+template <typename T>
+class Queue {
+private:
+    qNode<T>* fr;
+    qNode<T>* rear;
+
+public:
+    Queue(){
+        fr = nullptr;
+        rear = nullptr;
+    }
+
+    bool isEmpty(){
+        return fr == nullptr;
+    }
+
+    void enqueue(T data){
+        qNode<T>* newNode = new qNode<T>(data);
+        if(rear != nullptr){
+            rear->next = newNode;
+        }else{
+            fr = newNode;
+        }
+        rear = newNode;
+    }
+
+    T dequeue(){
+        if(isEmpty()){
+            cout<<"Queue is empty !!! :("<<endl;
+        }
+        qNode<T>* tempPtr = fr;
+        T data = tempPtr->data;
+        fr = fr->next;
+        if(!fr){
+            rear = nullptr;
+        }
+        delete tempPtr;
+        return data;
+    }
+};
+
 class Game {
     public:
 
@@ -274,16 +327,206 @@ GameNode* searchGame(GameNode* root, const string& gID) {
 }
 
 // Searching for Player by its ID
-PlayerNode* searchPlayer(PlayerNode* root, const string& pID) {
+PlayerNode* searchPlayer(PlayerNode* root, const string& pID){
     if (root == nullptr || root->player.pID == pID) {
         return root;
     }
 
-    if (pID < root->player.pID) {
+    if(pID < root->player.pID){
         return searchPlayer(root->l, pID);
     }
     return searchPlayer(root->r, pID);
 }
+
+// Save Game Data Preorder
+void saveGPreorder(GameNode* root, ofstream& outFile){
+    if (root == nullptr) {
+        return;
+    }
+    outFile<<root->game.gID<<','<<root->game.name<<','<<root->game.developer<<','<<root->game.publisher<<','<<root->game.fSize<<','<<root->game.downloads<<endl;
+
+    // Using Recursion
+    saveGPreorder(root->l, outFile);
+    saveGPreorder(root->r, outFile);
+}
+
+// save Player Data PReorder
+void savePPreorder(PlayerNode* root, ofstream& outFile){
+    if (root == nullptr){
+        return;
+    } 
+
+    outFile<<root->player.pID<<','<<root->player.name<<','<<root->player.pNumber<<','<<root->player.email<<','<<root->player.pass;
+
+    Player::GamesPlayed* gameCurrPtr = root->player.gamesPlayed;
+    while (gameCurrPtr != nullptr) {
+        outFile<<','<<gameCurrPtr->gID<<','<<gameCurrPtr->hoursPlayed<<','<<gameCurrPtr->achievementsUnl;
+        gameCurrPtr = gameCurrPtr->next;
+    }
+    outFile<<endl;
+
+    // Using Recursion
+    savePPreorder(root->l, outFile);
+    savePPreorder(root->r, outFile);
+}
+
+// Saving to CSV
+void saveData(GameNode* gameTree, PlayerNode* playerTree,const string& gFileN, const string& pFileN) {
+    ofstream gFile(gFileN);
+    ofstream pFile(pFileN);
+
+
+    if(gFile.is_open()){
+        saveGPreorder(gameTree, gFile);
+        gFile.close();
+        cout<<"Game data saved successfully to "<<gFileN<<endl;
+    }else{
+        cout<<"Error opening game file for writing."<<endl;
+    }
+
+    if(pFile.is_open()){
+        savePPreorder(playerTree, pFile);
+        pFile.close();
+        cout<<"Congrats !!! :) Player data saved successfully to "<<pFileN<<endl;
+    }else{
+        cout<<"Error!!! :( File is not openning"<<endl;
+    }
+}
+
+
+template <typename NodeType>
+struct layerNode {
+    NodeType* node;
+    int layer;
+
+    layerNode(){
+        node = nullptr;
+        layer = 0;
+    }
+
+    layerNode(NodeType* n, int l) {
+        node = n;
+        layer = l;
+
+    }
+};
+
+// show N layers of Game Tree
+void showGNLayers(GameNode* root, int N) {
+    if (!root) {
+        cout<<"Game tree is empty!!! :("<<endl;
+        return;
+    }
+
+    Queue<layerNode<GameNode>> q;
+    q.enqueue(layerNode<GameNode>(root, 1));
+    int lastLayer = 1;
+
+    while (!q.isEmpty()) {
+        layerNode<GameNode> currLayerNode = q.dequeue();
+        GameNode* currNode = currLayerNode.node;
+        int layer = currLayerNode.layer;
+
+        if(layer > N){
+            cout<<"Layer Limit was Reached, can't go further"<<endl;
+            return;
+        }
+
+        cout<<"Layer is : "<<layer<<endl;
+        cout<<"Game ID is : "<<currNode->game.gID<<" and Name is : "<<currNode->game.name<<endl;
+
+        if (currNode->l){
+             q.enqueue(layerNode<GameNode>(currNode->l, layer + 1));
+        }
+        if (currNode->r){
+            q.enqueue(layerNode<GameNode>(currNode->r, layer + 1));
+        } 
+        lastLayer = layer;
+    }
+
+    if(lastLayer < N){
+        cout<<"Layer Limit was Reached, can't go further"<<endl;
+    }
+}
+
+// Show N layers of Player Tree
+void showPNLayers(PlayerNode* root, int N){
+    if (!root) {
+        cout<<"Player tree is empty!"<<endl;
+        return;
+    }
+
+    Queue<layerNode<PlayerNode>> q;
+    q.enqueue(layerNode<PlayerNode>(root, 1));
+    int lastLayer = 1;
+
+    while (!q.isEmpty()) {
+        layerNode<PlayerNode> currLayerNode = q.dequeue();
+        PlayerNode* currNode = currLayerNode.node;
+        int layer = currLayerNode.layer;
+
+        if(layer > N){
+            cout<<"Layer Limit was Reached, can't go further"<<endl;
+            return;
+        }
+
+        cout<<"Layer is : "<<layer<<endl;
+        cout<<"Player ID is: "<<currNode->player.pID<<" and Name is: "<<currNode->player.name<<endl;
+
+        if (currNode->l){
+            q.enqueue(layerNode<PlayerNode>(currNode->l, layer + 1));
+        } 
+
+        if (currNode->r){
+            q.enqueue(layerNode<PlayerNode>(currNode->r, layer + 1));
+        } 
+        lastLayer = layer;
+    }
+
+    if(lastLayer < N){
+        cout<<"Layer Limit was Reached, can't go further"<<endl;
+    }
+}
+
+
+// Find layer of Game by ID
+int findGameLayer(GameNode* root, const string& gID) {
+    int layer = 1;
+    GameNode* currPtr = root;
+
+    while (currPtr){
+        if (currPtr->game.gID == gID) {
+            return layer;
+        } else if (gID < currPtr->game.gID) {
+            currPtr = currPtr->l;
+        } else {
+            currPtr = currPtr->r;
+        }
+        layer++;
+    }
+    //Not found
+    return -1;
+}
+
+// Find layer of  Player by ID
+int findPlayerLayer(PlayerNode* root, const string& pID) {
+    int layer = 1;
+    PlayerNode* currPtr = root;
+
+    while (currPtr) {
+        if (currPtr->player.pID == pID) {
+            return layer;
+        } else if (pID < currPtr->player.pID) {
+            currPtr = currPtr->l;
+        } else {
+            currPtr = currPtr->r;
+        }
+        layer++;
+    }
+    // Not found
+    return -1;
+}
+
 
 int main() {
     srand(static_cast<unsigned>(time(0))); 
@@ -318,7 +561,7 @@ int main() {
     cout<<"Enter the Game ID to search: (e.g. 9831286229)";
     cin>>searchGID;
     GameNode* foundGame = searchGame(gameTree, searchGID);
-    if (foundGame) {
+    if(foundGame){
         cout<<"Game Found!"<<endl;
         cout<<"Game ID: "<<foundGame->game.gID<<endl;
         cout<<"Name: "<<foundGame->game.name<<endl;
@@ -326,37 +569,71 @@ int main() {
         cout<<"Publisher: "<<foundGame->game.publisher<<endl;
         cout<<"Size: "<<foundGame->game.fSize<<" GB"<<endl;
         cout<<"Downloads: "<<foundGame->game.downloads<<endl;
-    } else {
+    }else{
         cout<<"Game not found!"<<endl;
     }
 
-    cout<<"Enter the Player ID to search: (e.g. 9990193347) ";
+    cout<<"Enter the Player ID to search: (e.g. 0295971126) ";
     cin>>searchPID;
     PlayerNode* isFoundPlayer = searchPlayer(playerTree, searchPID);
-    if (isFoundPlayer) {
+    if(isFoundPlayer){
         cout<<"Player Found!!! :)"<<endl;
         cout<<"Player ID : "<<isFoundPlayer->player.pID<<endl;
         cout<<"Name : "<<isFoundPlayer->player.name<<endl;
         cout<<"Phone Number : "<<isFoundPlayer->player.pNumber<<endl;
         cout<<"Email : "<<isFoundPlayer->player.email<<endl;
-    } else {
+    }else{
         cout<<"Player not found!!! :("<<endl;
     }
 
 
     string deleteGID, deletePID;
     cout<<"Enter the Game ID to delete: ";
-    cin >> deleteGID;
+    cin>>deleteGID;
     gameTree = deleteGame(gameTree, deleteGID);
 
     cout<<"Enter the Player ID to delete : ";
-    cin >> deletePID;
+    cin>>deletePID;
     playerTree = deletePlayer(playerTree, deletePID);
 
-    cout<<"New Stored Games are :"<<endl;
-    printGames(gameTree);
-    cout<<"New Stored Players are :"<<endl;
-    printPlayers(playerTree);
+    // cout<<"New Stored Games are :"<<endl;
+    // printGames(gameTree);
+    // cout<<"New Stored Players are :"<<endl;
+    // printPlayers(playerTree);
+
+    saveData(gameTree, playerTree, "saveGames.csv", "savePlayers.csv");
+
+    int noOfLayers;
+    cout<<"Enter the number of layers : "<<endl;
+    cin>>noOfLayers;
+
+    cout<<"Game Tree Layers are : "<<endl;
+    showGNLayers(gameTree , noOfLayers);
+
+    cout<<"Player Tree Layers are : "<<endl;
+    showPNLayers(playerTree , noOfLayers);
+
+
+    string searchGIDLayer, searchPIDLayer;
+    cout<<"Enter the Game ID whose layer you want to find: (e.g. 0533242523 )"<<endl;
+    cin>>searchGIDLayer;
+    int gLayer = findGameLayer(gameTree, searchGIDLayer);
+    if(gLayer != -1){
+        cout<<"This Game ID "<<searchGIDLayer<<" is found at this layer number: "<<gLayer<<endl;
+    }else{
+        cout<<"Game ID not found in the tree. :("<<endl;
+    }
+
+    cout<<"Enter the Player ID whose layer you want to find:  (e.g. 0024285437 )"<<endl;
+    cin>>searchPIDLayer;
+    int plLayer = findPlayerLayer(playerTree, searchPIDLayer);
+    if(plLayer != -1){
+        cout<<" This Player ID : "<<searchPIDLayer<<" is found at this layer number : "<<plLayer<<endl;
+    }else{
+        cout<<"Player ID not found in the tree. :("<<endl;
+    }
+
 
     return 0;
 }
+
