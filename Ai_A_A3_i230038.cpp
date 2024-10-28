@@ -26,7 +26,7 @@ class Player {
     string pNumber;
     string email;
     string pass;
-    
+
     class GamesPlayed {
         public:
         string gID;
@@ -79,6 +79,40 @@ GameNode* insertGame(GameNode* root, const Game& game) {
     return root;
 }
 
+// Function to delete Game
+GameNode* deleteGame(GameNode* root, const string& gID) {
+    if (root == nullptr) {
+        cout<<"Game ID not found!!! :("<<endl;
+        return root;
+    }
+
+    if (gID < root->game.gID) {
+        root->l = deleteGame(root->l, gID);
+    } else if (gID > root->game.gID) {
+        root->r = deleteGame(root->r, gID);
+    } else {
+        // Node with has either one child or no child
+        if (root->l == nullptr) {
+            GameNode* temp = root->r;
+            delete root;
+            return temp;
+        } else if (root->r == nullptr) {
+            GameNode* temp = root->l;
+            delete root;
+            return temp;
+        }
+
+        // Node which has two children
+        GameNode* temp = root->r;
+        while (temp && temp->l != nullptr) {
+            temp = temp->l;
+        }
+        root->game = temp->game;
+        root->r = deleteGame(root->r, temp->game.gID);
+    }
+    return root;
+}
+
 // Function to create a new Player node
 PlayerNode* createPlayerNode(const Player& player) {
     PlayerNode* newN = new PlayerNode;
@@ -102,6 +136,39 @@ PlayerNode* insertPlayer(PlayerNode* root, const Player& player) {
         cout<<player.pID<<" already exists."<<endl;
     }
 
+    return root;
+}
+
+PlayerNode* deletePlayer(PlayerNode* root, const string& pID) {
+    if (root == nullptr) {
+        cout<<"Player ID not found!!! :("<<endl;
+        return root;
+    }
+
+    if (pID < root->player.pID) {
+        root->l = deletePlayer(root->l, pID);
+    } else if (pID > root->player.pID) {
+        root->r = deletePlayer(root->r, pID);
+    } else {
+        // Node having either one child or no child
+        if (root->l == nullptr) {
+            PlayerNode* temp = root->r;
+            delete root;
+            return temp;
+        } else if (root->r == nullptr) {
+            PlayerNode* temp = root->l;
+            delete root;
+            return temp;
+        }
+
+        // Node having  two children
+        PlayerNode* temp = root->r;
+        while (temp && temp->l != nullptr) {
+            temp = temp->l;
+        }
+        root->player = temp->player;
+        root->r = deletePlayer(root->r, temp->player.pID);
+    }
     return root;
 }
 
@@ -143,9 +210,9 @@ void readGames(GameNode*& gameTree, const string& filename) {
         getline(ss, game.name, ',');
         getline(ss, game.developer, ',');
         getline(ss, game.publisher, ',');
-        ss >> game.fSize;
+        ss>>game.fSize;
         ss.ignore();
-        ss >> game.downloads;
+        ss>>game.downloads;
 
         gameTree = insertGame(gameTree, game);
     }
@@ -178,9 +245,9 @@ void readPlayers(PlayerNode*& playerTree, const string& filename, int lastRollNo
             int achievementsUnl;
 
             getline(ss, gID, ',');
-            ss >> hoursPlayed;
+            ss>>hoursPlayed;
             ss.ignore();
-            ss >> achievementsUnl;
+            ss>>achievementsUnl;
 
             Player::GamesPlayed* newGame = new Player::GamesPlayed;
             newGame->gID = gID;
@@ -194,6 +261,30 @@ void readPlayers(PlayerNode*& playerTree, const string& filename, int lastRollNo
     }
 }
 
+// Searching for Game by its ID
+GameNode* searchGame(GameNode* root, const string& gID) {
+    if (root == nullptr || root->game.gID == gID) {
+        return root;
+    }
+
+    if (gID < root->game.gID) {
+        return searchGame(root->l, gID);
+    }
+    return searchGame(root->r, gID);
+}
+
+// Searching for Player by its ID
+PlayerNode* searchPlayer(PlayerNode* root, const string& pID) {
+    if (root == nullptr || root->player.pID == pID) {
+        return root;
+    }
+
+    if (pID < root->player.pID) {
+        return searchPlayer(root->l, pID);
+    }
+    return searchPlayer(root->r, pID);
+}
+
 int main() {
     srand(static_cast<unsigned>(time(0))); 
 
@@ -203,7 +294,7 @@ int main() {
     
     int lastRollNo = rollNo % 100; //Last 2 digits of Roll no
     if(lastRollNo > 89){
-        lastRollNo -+ 10;
+        lastRollNo -= 10;
     }
 
     GameNode* gameTree = nullptr;
@@ -215,11 +306,56 @@ int main() {
 
     readPlayers(playerTree, "Players.txt", lastRollNo);
 
-    // Printing the Storred Games and Players Respectively
-    cout<<"Stored Games:"<<endl;
-    printGames(gameTree);
+    // Printing the Stored Games and Players Respectively
+    // cout<<"Stored Games:"<<endl;
+    // printGames(gameTree);
 
-    cout<<"Stored Players:"<<endl;
+    // cout<<"Stored Players:"<<endl;
+    // printPlayers(playerTree);
+
+
+    string searchGID, searchPID;
+    cout<<"Enter the Game ID to search: (e.g. 9831286229)";
+    cin>>searchGID;
+    GameNode* foundGame = searchGame(gameTree, searchGID);
+    if (foundGame) {
+        cout<<"Game Found!"<<endl;
+        cout<<"Game ID: "<<foundGame->game.gID<<endl;
+        cout<<"Name: "<<foundGame->game.name<<endl;
+        cout<<"Developer: "<<foundGame->game.developer<<endl;
+        cout<<"Publisher: "<<foundGame->game.publisher<<endl;
+        cout<<"Size: "<<foundGame->game.fSize<<" GB"<<endl;
+        cout<<"Downloads: "<<foundGame->game.downloads<<endl;
+    } else {
+        cout<<"Game not found!"<<endl;
+    }
+
+    cout<<"Enter the Player ID to search: (e.g. 9990193347) ";
+    cin>>searchPID;
+    PlayerNode* isFoundPlayer = searchPlayer(playerTree, searchPID);
+    if (isFoundPlayer) {
+        cout<<"Player Found!!! :)"<<endl;
+        cout<<"Player ID : "<<isFoundPlayer->player.pID<<endl;
+        cout<<"Name : "<<isFoundPlayer->player.name<<endl;
+        cout<<"Phone Number : "<<isFoundPlayer->player.pNumber<<endl;
+        cout<<"Email : "<<isFoundPlayer->player.email<<endl;
+    } else {
+        cout<<"Player not found!!! :("<<endl;
+    }
+
+
+    string deleteGID, deletePID;
+    cout<<"Enter the Game ID to delete: ";
+    cin >> deleteGID;
+    gameTree = deleteGame(gameTree, deleteGID);
+
+    cout<<"Enter the Player ID to delete : ";
+    cin >> deletePID;
+    playerTree = deletePlayer(playerTree, deletePID);
+
+    cout<<"New Stored Games are :"<<endl;
+    printGames(gameTree);
+    cout<<"New Stored Players are :"<<endl;
     printPlayers(playerTree);
 
     return 0;
